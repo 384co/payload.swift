@@ -182,27 +182,71 @@ struct PayloadKeyedDecodingContainer<Key: CodingKey>: KeyedDecodingContainerProt
         
         return try _PayloadDecoder.deserializeFloat(buffer, type: entry.type)
     }
+    
+    public func decode(_ type: Date.Type, forKey key: Key) throws -> Date {
+        logger?.debug("Date decode forKey: \(key.stringValue)")
+
+        guard let entry = metadata.getEntry(for: key.stringValue),
+              let buffer = getData(for: key)
+        else {
+            throw PayloadDecoderError.parsingError("Failed to load data and metadata for \(key.stringValue)")
+        }
+        
+        return try _PayloadDecoder.deserializeDate(buffer, type: entry.type)
+    }
 
     
     public func decode<T>(_ type: T.Type, forKey key: Key) throws -> T where T: Decodable {
         logger?.debug("Generic keyed decode<T>(type: \(type), forKey: \(key.stringValue))")
-        guard let entry = metadata.getEntry(for: key.stringValue),
-              let buffer = getData(for: key)
-        else {
-            throw PayloadDecoderError.metadataError("Failed to load data and metadata for \(key)")
-        }
+
         
-        switch entry.type {
-        case .array, .set, .map, .object:
-            //logger?.debug("  Type DS = \(DS.self) is a DecodableSequence.Type")
-            //return try decodeSequence(DS.self, forKey: key) as! T
+        switch type {
+
+        case is Int.Type:
+            return try decode(Int.self, forKey: key) as! T
+    
+        case is Int8.Type:
+            return try decode(Int8.self, forKey: key) as! T
+        
+        case is Int16.Type:
+            return try decode(Int16.self, forKey: key) as! T
+        
+        case is Int32.Type:
+            return try decode(Int32.self, forKey: key) as! T
+            
+        case is Int64.Type:
+            return try decode(Int64.self, forKey: key) as! T
+            
+        case is UInt.Type:
+            return try decode(UInt.self, forKey: key) as! T
+            
+        case is UInt16.Type:
+            return try decode(UInt16.self, forKey: key) as! T
+            
+        case is UInt32.Type:
+            return try decode(UInt32.self, forKey: key) as! T
+            
+        // Floating point types
+        case is Float.Type:
+            return try decode(Float.self, forKey: key) as! T
+
+        case is Double.Type:
+            return try decode(Double.self, forKey: key) as! T
+            
+        // Date
+        case is Date.Type:
+            return try decode(Date.self, forKey: key) as! T
+            
+        default:
+            // Recursive case - Higher-order data types - Arrays, Sets, Dictionaries, objects
+            guard let buffer = getData(for: key)
+            else {
+                throw PayloadDecoderError.metadataError("Failed to load data and metadata for \(key)")
+            }
+            
             logger?.debug("Recursing to decode sequence of type \(T.self)")
             let decoder = _PayloadDecoder(data: buffer)
             return try T(from: decoder)
-            
-        default:
-            logger?.debug("Can't decode Swift type \(T.self) from payload type \(entry.type.rawValue)")
-            throw PayloadDecoderError.unsupportedType("Unsupported type \(T.self)")
         }
     }
 

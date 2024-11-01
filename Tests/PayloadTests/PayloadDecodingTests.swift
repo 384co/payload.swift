@@ -40,4 +40,56 @@ class PayloadDecodingTests: XCTestCase {
             XCTFail("Failed to decode")
         }
     }
+    
+    func testGenericTypeInference() throws {
+        
+        enum TestError: Error {
+            case madeUpError
+        }
+        
+        class GenericClass {
+            func foo(_ type: Int.Type) throws {
+                print("foo Int")
+            }
+            
+            func foo(_ type: Int64.Type) throws {
+                print("foo Int64")
+            }
+            
+            /*
+            // Un-comment this to have the g.foo(UInt32.self) call below go to this function instead of the BinaryInteger version
+            func foo(_ type: UInt32.Type) throws {
+                print("foo UInt32")
+            }
+            */
+            
+            func foo<T>(_ type: T.Type) throws where T: BinaryInteger & Codable {
+                print("foo BinaryInteger (type = \(T.self))")
+            }
+            
+            func foo(_ type: String.Type) throws {
+                print("foo String")
+            }
+            
+            func foo<T>(_ type: T.Type) throws where T: Codable {
+                print("foo Generic (type = \(T.self))")
+            }
+            
+            func fooArray<T>(_ type: [T].Type) throws {
+                print("foo Array (type = \(T.self))")
+            }
+            
+            func foo<T>(_ type: T.Type) throws where T: ExpressibleByArrayLiteral & Codable {
+                print("foo ExpressibleByArrayLiteral (type = \(T.self))")
+            }
+        }
+        
+        let g = GenericClass()
+        try g.foo(Int.self)
+        try g.foo(Int64.self)
+        try g.foo(UInt32.self)
+        try g.foo(String.self)
+        //try g.foo(Date.self)
+        try g.foo([Int].self)
+    }
 }

@@ -88,7 +88,7 @@ class PayloadUnkeyedDecodingContainer: UnkeyedDecodingContainer {
     }
 
     public func decode(_ type: String.Type) throws -> String {
-        //logger?.debug("String decode(type: String)  index = \(self.currentIndex))")
+        //logger?.debug("String decode(type: String)  index = \(self.currentIndex)")
 
         guard let entry = metadata.getEntry(for: currentIndex),
               let buffer = getData(for: currentIndex)
@@ -138,6 +138,7 @@ class PayloadUnkeyedDecodingContainer: UnkeyedDecodingContainer {
     }
 
     public func decode(_ type: Int.Type) throws -> Int {
+        logger?.debug("Int decode() unkeyed")
         return try decodeInteger()
     }
 
@@ -177,28 +178,64 @@ class PayloadUnkeyedDecodingContainer: UnkeyedDecodingContainer {
         return try decodeInteger()
     }
 
-    public func decode<T>(_ type: T.Type) throws -> T where T: Decodable {
-        logger?.debug("Generic decode(type: \(T.self)  index = \(self.currentIndex))")
+    public func decode<T: Decodable>(_ type: T.Type) throws -> T {
+        logger?.debug("Generic unkeyed decode(type: \(T.self)  index = \(self.currentIndex))")
+                      
+        // Apparently Swift sucks at type inference and often (always?) calls the generic function instead of the type-specific functions above. 😬
+        // Oh well.  Here Swift let me help you figure it out:
+        switch type {
+            
+        case is Int.Type:
+            return try decode(Int.self) as! T
         
-        guard let entry = metadata.getEntry(for: currentIndex),
-        let buffer = getData(for: currentIndex)
-        else {
-        throw PayloadDecoderError.parsingError("Failed to load data and metadata for \(currentIndex)")
-        }        
-         
-        switch entry.type {
-        case .array, .set, .object, .map:
-        logger?.debug("Recursing to decode \(T.self)")
+        case is Int8.Type:
+            return try decode(Int8.self) as! T
+        
+        case is Int16.Type:
+            return try decode(Int16.self) as! T
+        
+        case is Int32.Type:
+            return try decode(Int32.self) as! T
+            
+        case is Int64.Type:
+            return try decode(Int64.self) as! T
+            
+        case is UInt.Type:
+            return try decode(UInt.self) as! T
+            
+        case is UInt16.Type:
+            return try decode(UInt16.self) as! T
+            
+        case is UInt32.Type:
+            return try decode(UInt32.self) as! T
+            
+        // Floating point types
+        case is Float.Type:
+            return try decode(Float.self) as! T
+
+        case is Double.Type:
+            return try decode(Double.self) as! T
+            
+        // Date
+        case is Date.Type:
+            return try decode(Date.self) as! T
+            
+        // Higher-order types - Arrays, Sets, structs/classes, and Dictionaries
+        default:
+            
+            guard let buffer = getData(for: self.currentIndex)
+            else {
+                logger?.error("Failed to extract data for item at index \(self.currentIndex)")
+                throw PayloadDecoderError.parsingError("Failed to extract data for index \(self.currentIndex)")
+            }
+            
+            logger?.debug("Recursing to decode \(T.self)")
             let decoder = _PayloadDecoder(data: buffer)
             let t = try T(from: decoder)
             self.currentIndex += 1
             return t
-         
-        default:
-            logger?.error("Can't decode Swift type \(T.self) from serialized type \(entry.type.rawValue)")
-            throw PayloadDecoderError.unsupportedType("Can't decode Swift type \(T.self) from serialized type \(entry.type.rawValue)")
         }
-    }
+    } // end generic decode<T: Decodable>()
 
     public func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey {
         fatalError("Nested containers are not supported")

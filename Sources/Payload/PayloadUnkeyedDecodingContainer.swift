@@ -178,6 +178,20 @@ class PayloadUnkeyedDecodingContainer: UnkeyedDecodingContainer {
         return try decodeInteger()
     }
 
+    public func decode(_ type: Date.Type) throws -> Date {
+        logger?.debug("Date decode index = \(self.currentIndex)")
+
+        guard let entry = metadata.getEntry(for: currentIndex),
+              let buffer = getData(for: currentIndex)
+        else {
+            throw PayloadDecoderError.parsingError("Failed to load data and metadata for \(currentIndex)")
+        }
+        
+        let date = try _PayloadDecoder.deserializeDate(buffer, type: entry.type)
+        self.currentIndex += 1
+        return date
+    }
+    
     public func decode<T: Decodable>(_ type: T.Type) throws -> T {
         logger?.debug("Generic unkeyed decode(type: \(T.self)  index = \(self.currentIndex))")
                       

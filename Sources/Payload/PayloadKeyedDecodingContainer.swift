@@ -200,6 +200,8 @@ struct PayloadKeyedDecodingContainer<Key: CodingKey>: KeyedDecodingContainerProt
         logger?.debug("Generic keyed decode<T>(type: \(type), forKey: \(key.stringValue))")
 
         
+        // Apparently Swift sucks at type inference and often (always?) calls the generic function instead of the type-specific functions above. 😬
+        // Oh well.  Here Swift let me help you figure it out:
         switch type {
 
         case is Int.Type:
